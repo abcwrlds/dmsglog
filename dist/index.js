@@ -28,42 +28,51 @@ const DeletedMessageLogger = {
       const MessageStore = getByProps('getMessage', 'getMessages');
       const Dispatcher = getByProps('_dispatch');
 
+      if (!MessageStore || !Dispatcher) {
+        console.error('[DeletedMessageLogger] Failed to find required modules');
+        return;
+      }
+
       Patcher.before(Dispatcher, '_dispatch', (self, args) => {
-        const [event] = args;
+        try {
+          const [event] = args;
+          if (!event) return;
 
-        // Handle message deletion
-        if (event.type === 'MESSAGE_DELETE') {
-          const { id, channelId } = event;
-          const message = MessageStore?.getMessage(channelId, id);
+          // Handle message deletion
+          if (event.type === 'MESSAGE_DELETE') {
+            const { id, channelId } = event;
+            if (!id || !channelId) return;
 
-          if (message) {
-            deletedMessages.set(id, {
-              id: message.id,
-              content: message.content,
-              author: message.author,
-              channelId: message.channel_id,
-              timestamp: new Date().toISOString(),
-              attachments: message.attachments || [],
-              embeds: message.embeds || []
-            });
+            const message = MessageStore.getMessage(channelId, id);
 
-            sendReply(channelId, `🗑️ **Message Deleted**
-**Author:** ${message.author.username}
-**Content:** ${message.content || '*[No text content]*'}`);
+            if (message) {
+              deletedMessages.set(id, {
+                id: message.id,
+                content: message.content,
+                author: message.author,
+                channelId: message.channel_id,
+                timestamp: new Date().toISOString(),
+                attachments: message.attachments || [],
+                embeds: message.embeds || []
+              });
+
+              sendReply(channelId, `🗑️ **Message Deleted**\n**Author:** ${message.author?.username || 'Unknown'}\n**Content:** ${message.content || '*[No text content]*'}`);
+            }
           }
-        }
 
-        // Handle message edits
-        if (event.type === 'MESSAGE_UPDATE') {
-          const { id, channelId } = event;
-          const oldMessage = MessageStore?.getMessage(channelId, id);
+          // Handle message edits
+          if (event.type === 'MESSAGE_UPDATE') {
+            const { id, channelId, message: newMessage } = event;
+            if (!id || !channelId || !newMessage) return;
 
-          if (oldMessage && oldMessage.content !== event.message.content) {
-            sendReply(channelId, `✏️ **Message Edited**
-**Author:** ${oldMessage.author.username}
-**Before:** ${oldMessage.content}
-**After:** ${event.message.content}`);
+            const oldMessage = MessageStore.getMessage(channelId, id);
+
+            if (oldMessage && oldMessage.content && newMessage.content && oldMessage.content !== newMessage.content) {
+              sendReply(channelId, `✏️ **Message Edited**\n**Author:** ${oldMessage.author?.username || 'Unknown'}\n**Before:** ${oldMessage.content}\n**After:** ${newMessage.content}`);
+            }
           }
+        } catch (err) {
+          console.error('[DeletedMessageLogger] Error in dispatch handler:', err);
         }
       });
     } catch (error) {
