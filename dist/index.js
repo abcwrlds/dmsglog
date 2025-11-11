@@ -1,0 +1,6 @@
+var l=require("enmity/managers/plugins"),u=require("enmity/patcher"),a=require("enmity/metro"),o=require("enmity/api/clyde"),p="DeletedMessageLogger",h="1.0.0",m="Logs and displays deleted messages in Discord",v=[{name:"YourName",id:"123456789012345678"}],E="#ff4444",M="https://i.imgur.com/example.png",y={name:p,version:h,description:m,authors:v,color:E,icon:M};const c=u.create("deleted-message-logger"),i=new Map,S={...y,onStart(){try{const r=a.getByProps("getMessage","getMessages"),g=a.getByProps("_dispatch");c.before(g,"_dispatch",(D,d)=>{const[t]=d;if(t.type==="MESSAGE_DELETE"){const{id:s,channelId:n}=t,e=r?.getMessage(n,s);e&&(i.set(s,{id:e.id,content:e.content,author:e.author,channelId:e.channel_id,timestamp:new Date().toISOString(),attachments:e.attachments||[],embeds:e.embeds||[]}),o.sendReply(n,`\u{1F5D1}\uFE0F **Message Deleted**
+**Author:** ${e.author.username}
+**Content:** ${e.content||"*[No text content]*"}`))}if(t.type==="MESSAGE_UPDATE"){const{id:s,channelId:n}=t,e=r?.getMessage(n,s);e&&e.content!==t.message.content&&o.sendReply(n,`\u270F\uFE0F **Message Edited**
+**Author:** ${e.author.username}
+**Before:** ${e.content}
+**After:** ${t.message.content}`)}})}catch(r){console.error("[DeletedMessageLogger] Error starting plugin:",r)}},onStop(){i.clear(),c.unpatchAll()},getSettingsPanel(){return null}};l.registerPlugin(S);
